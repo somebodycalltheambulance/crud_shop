@@ -1,0 +1,27 @@
+# pyproject для ruff
+cat >> pyproject.toml << 'EOF'
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E","F","I","UP","B"]
+ignore = ["E501"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+EOF
+
+# хуки pre-commit
+cat > .pre-commit-config.yaml << 'EOF'
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
+    hooks:
+      - id: ruff
+        args: ["--fix"]
+      - id: ruff-format
+EOF
+
+pre-commit install
