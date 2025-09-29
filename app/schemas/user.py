@@ -1,4 +1,8 @@
-from pydantic import BaseModel, EmailStr, Field
+from typing import Annotated
+
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, StringConstraints
+
+Pwd = Annotated[str, StringConstraints(min_length=8, max_length=72)]
 
 
 class UserBase(BaseModel):
@@ -6,11 +10,13 @@ class UserBase(BaseModel):
 
 
 class UserCreate(UserBase):
-    password: str = Field(min_length=6)
+    email: EmailStr = Field(description="user email")
+    password: Pwd
 
 
 class UserOut(UserBase):
     id: int
+    email: EmailStr
 
     class Config:
-        from_attributes = True  # Позволяет возвращать ORM-обьекты
+        model_config = ConfigDict(from_attributes=True)  # Позволяет возвращать ORM-обьекты

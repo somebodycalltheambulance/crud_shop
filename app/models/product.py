@@ -13,5 +13,5 @@ class Product(Base):
     price = Column(Float, nullable=False)
     description = Column(String)
 
-    category_id = Column(Integer, ForeignKey("categories_id"))
+    category_id = Column(Integer, ForeignKey("categories.id"))
     category = relationship("Category", backref="products")

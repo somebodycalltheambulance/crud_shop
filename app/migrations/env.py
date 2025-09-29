@@ -1,33 +1,43 @@
+# app/migrations/env.py
+import pathlib
+import sys
 from logging.config import fileConfig
 
 from alembic import context
+from sqlalchemy import create_engine  # <-- sync engine
 
 from app.core.config import settings
 from app.db.base import Base
 
-# this is the Alembic Config object, which provides
-# access to the values within the .ini file in use.
-config = context.config
+# PYTHONPATH к корню репо (чтобы импортировался пакет app)
+ROOT = pathlib.Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
-# Interpret the config file for Python logging.
-# This line sets up loggers basically.
+import app.models
+
+config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# add your model's MetaData object here
-# for 'autogenerate' support
-# from myapp import mymodel
-# target_metadata = mymodel.Base.metadata
 target_metadata = Base.metadata
 
 
-# other values from the config, defined by the needs of env.py,
-# can be acquired:
-# my_important_option = config.get_main_option("my_important_option")
-# ... etc.
+def get_sync_url() -> str:
+    # Превращаем async URL в sync для Alembic
+    url = settings.database_url
+    # примеры:
+    # postgresql+asyncpg:// -> postgresql+psycopg://
+    return (
+        url.replace("+asyncpg", "+psycopg")
+        .replace("+aiopg", "+psycopg")
+        .replace("+asyncpg", "")  # на случай пустого драйвера
+    )
+
+
 def run_migrations_offline():
     context.configure(
-        url=settings.database_url,
+        url=get_sync_url(),
         target_metadata=target_metadata,
         literal_binds=True,
     )
@@ -36,19 +46,13 @@ def run_migrations_offline():
 
 
 def run_migrations_online():
-    import asyncio
+    engine = create_engine(get_sync_url(), future=True)
+    with engine.begin() as connection:
+        context.configure(connection=connection, target_metadata=target_metadata)
+        context.run_migrations()
 
-    from sqlalchemy.ext.asyncio import create_async_engine
 
-    engine = create_async_engine(settings.database_url, pool_pre_ping=True)
-
-    async def run_async():
-        async with engine.begin() as conn:
-            await conn.run_sync(
-                lambda sync_conn: context.configure(
-                    connection=sync_conn, target_metadata=target_metadata
-                )
-            )
-            context.run_migrations()
-
-    asyncio.run(run_async())
+if context.is_offline_mode():
+    run_migrations_offline()
+else:
+    run_migrations_online()
