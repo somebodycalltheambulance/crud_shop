@@ -1,24 +1,43 @@
+from datetime import UTC, datetime, timedelta
+
+from jose import jwt
 from passlib.context import CryptContext
 
-# Argon2id
+from app.core.config import settings
+
 pwd_context = CryptContext(
-    schemes=["argon2"],
+    schemes=["argon2", "bcrypt"],
+    default="argon2",
     deprecated="auto",
-    argon2__type="ID",  # именно Argon2id
-    argon2__rounds=3,  # сколько «проходов» (время)
-    argon2__memory_cost=256 * 1024,  # память в КБ → 256 MB
-    argon2__parallelism=2,  # количество потоков
+    argon2__type="ID",
+    argon2__memory_cost=65536,
+    argon2__time_cost=3,
+    argon2__parallelism=2,
 )
 
 
-def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+def hash_password(plain: str) -> str:
+    return pwd_context.hash(plain)
 
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+def verify_password(plain: str, hashed: str) -> bool:
+    return pwd_context.verify(plain, hashed)
 
 
 def needs_rehash(hashed: str) -> bool:
-    # true для старых bcrypt-хэшей
     return pwd_context.needs_update(hashed)
+
+
+def create_access_token(subject: str, expires_minutes: int | None = None) -> str:
+    expire = datetime.now(UTC) + timedelta(
+        minutes=expires_minutes or settings.access_token_expire_minutes
+    )
+    to_encode = {"sub": subject, "exp": expire}
+    return jwt.encode(to_encode, settings.jwt_secret, algorithm=settings.jwt_algorithm)
+
+
+def decode_token(token: str) -> dict | None:
+    try:
+        return jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
+    except Exception:
+        return None

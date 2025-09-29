@@ -1,4 +1,4 @@
-from typing import Generic, TypeVar
+from typing import TypeVar
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,7 +9,7 @@ ModelType = TypeVar("ModelType", bound=Base)
 
 
 # Универсальный CRUD для любой модели в БД.
-class BaseRepository(Generic[ModelType]):
+class BaseRepository(ModelType):
     def __init__(self, model: type[ModelType]):
         self.model = model
 
