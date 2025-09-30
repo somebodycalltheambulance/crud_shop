@@ -4,7 +4,7 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E","F","I","UP","B"]
-ignore = ["E501"]
+ignore = ["E501", "B008"]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -13,3 +13,4 @@ indent-style = "space"
 [tool.ruff.per-file-ignores]
 "app/migrations/env.py" = ["E402", "F401"]
 "app/scripts/debug_models.py" = ["E402"]
+

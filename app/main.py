@@ -1,7 +1,6 @@
 from fastapi import FastAPI
 
-from app.api import categories, products, users
-from app.core.config import settings
+from app.api import auth, categories, products, users
 
 app = FastAPI(title="Techly Marketplace(Backend)")
 
@@ -14,7 +13,4 @@ async def health():
 app.include_router(users.router)
 app.include_router(categories.router)
 app.include_router(products.router)
-
-safe = settings.database_url
-safe = safe.replace(safe.split("@")[0], "//***:***")
-print(f"[DB_URL] {safe}")
+app.include_router(auth.router)
