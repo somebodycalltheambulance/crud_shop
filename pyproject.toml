@@ -10,7 +10,7 @@ ignore = ["E501", "B008"]
 quote-style = "double"
 indent-style = "space"
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "app/migrations/env.py" = ["E402", "F401"]
 "app/scripts/debug_models.py" = ["E402"]
 

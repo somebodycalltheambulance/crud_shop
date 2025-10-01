@@ -1,5 +1,7 @@
+from sqlalchemy import and_, asc, desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.product import Product
 from app.repositories.category import CategoryRepository
 from app.repositories.product import ProductRepository
 
@@ -17,8 +19,37 @@ class ProductService:
         return await product_repo.create(db, data)
 
     @staticmethod
-    async def list(db: AsyncSession):
-        return await product_repo.list(db)
+    async def list(
+        db: AsyncSession,
+        *,
+        limit: int = 10,
+        offset: int = 0,
+        category_id: int | None = None,
+        brand: str | None = None,
+        price_min: float | None = None,
+        price_max: float | None = None,
+        sort: str | None = None,  # "price", "-price", "name", "-name"
+    ):
+        stmt = select(Product)
+        conds = []
+        if category_id is not None:
+            conds.append(Product.category_id == category_id)
+        if brand:
+            conds.append(Product.brand.ilike(f"%{brand}%"))
+        if price_min is not None:
+            conds.append(Product.price >= price_min)
+        if price_max is not None:
+            conds.append(Product.price <= price_max)
+        if conds:
+            stmt = stmt.where(and_(*conds))
+
+        if sort:
+            col = Product.price if "price" in sort else Product.name
+            stmt = stmt.order_by(desc(col) if sort.startswith("-") else asc(col))
+
+        stmt = stmt.limit(limit).offset(offset)
+        res = await db.execute(stmt)
+        return res.scalars().all()
 
     @staticmethod
     async def get(db: AsyncSession, id_: int):

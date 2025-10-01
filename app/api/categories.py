@@ -4,6 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db
+from app.auth.deps import get_current_user
+from app.models.user import User
 from app.schemas.catergory import CategoryCreate, CategoryOut, CategoryUpdate
 from app.services.category_service import CategoryService
 
@@ -11,7 +13,11 @@ router = APIRouter(prefix="/categories", tags=["categories"])
 
 
 @router.post("", response_model=CategoryOut, status_code=status.HTTP_201_CREATED)
-async def create_category(payload: CategoryCreate, db: Annotated[AsyncSession, Depends(get_db)]):
+async def create_category(
+    payload: CategoryCreate,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _user: User = Depends(get_current_user),
+):
     try:
         return await CategoryService.create(db, name=payload.name)
     except ValueError as e:
@@ -25,7 +31,10 @@ async def list_categories(db: Annotated[AsyncSession, Depends(get_db)]):
 
 @router.patch("/{category_id}", response_model=CategoryOut)
 async def update_category(
-    category_id: int, payload: CategoryUpdate, db: Annotated[AsyncSession, Depends(get_db)]
+    category_id: int,
+    payload: CategoryUpdate,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _user: User = Depends(get_current_user),
 ):
     cat = await CategoryService.get(db, category_id)
     if not cat:
@@ -34,7 +43,11 @@ async def update_category(
 
 
 @router.delete("/{category_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_category(category_id: int, db: Annotated[AsyncSession, Depends(get_db)]):
+async def delete_category(
+    category_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _user: User = Depends(get_current_user),
+):
     cat = await CategoryService.get(db, category_id)
     if not cat:
         raise HTTPException(404, "Category not found")
