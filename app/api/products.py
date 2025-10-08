@@ -4,8 +4,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db
-from app.auth.deps import get_current_user
+from app.auth.deps import require_admin
 from app.models.user import User
+from app.schemas.common import Page
 from app.schemas.product import ProductCreate, ProductOut, ProductUpdate
 from app.services.product_service import ProductService
 
@@ -16,7 +17,7 @@ router = APIRouter(prefix="/products", tags=["products"])
 async def create_product(
     payload: ProductCreate,
     db: Annotated[AsyncSession, Depends(get_db)],
-    _user: User = Depends(get_current_user),
+    _user: User = Depends(require_admin),
 ):
     try:
         return await ProductService.create(db, payload.model_dump())
@@ -24,8 +25,7 @@ async def create_product(
         raise HTTPException(400, detail=str(e)) from e
 
 
-@router.get("", response_model=list[ProductOut])
-@router.get("", response_model=list[ProductOut])
+@router.get("", response_model=Page[ProductOut])
 async def list_products(
     db: AsyncSession = Depends(get_db),
     limit: int = 10,
@@ -36,16 +36,8 @@ async def list_products(
     price_max: float | None = None,
     sort: str | None = None,  # "price", "-price", "name", "-name"
 ):
-    return await ProductService.list(
-        db,
-        limit=limit,
-        offset=offset,
-        category_id=category_id,
-        brand=brand,
-        price_min=price_min,
-        price_max=price_max,
-        sort=sort,
-    )
+    data = await ProductService.list(db, limit=limit, offset=offset)
+    return {**data, "limit": limit, "offset": offset}
 
 
 @router.get("/{product_id}", response_model=ProductOut)
@@ -61,7 +53,7 @@ async def update_product(
     product_id: int,
     payload: ProductUpdate,
     db: Annotated[AsyncSession, Depends(get_db)],
-    _user: User = Depends(get_current_user),
+    _user: User = Depends(require_admin),
 ):
     prod = await ProductService.get(db, product_id)
     if not prod:
@@ -73,7 +65,7 @@ async def update_product(
 async def delete_product(
     product_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
-    _user: User = Depends(get_current_user),
+    _user: User = Depends(require_admin),
 ):
     prod = await ProductService.get(db, product_id)
     if not prod:

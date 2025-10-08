@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Float, ForeignKey, Integer, String
+from sqlalchemy import CheckConstraint, Column, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
 from app.db.base import Base
@@ -6,6 +6,7 @@ from app.db.base import Base
 
 class Product(Base):
     __tablename__ = "products"
+    __table_args__ = (CheckConstraint("price >= 0", name="ck_products_price_nonneg"),)
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False, index=True)

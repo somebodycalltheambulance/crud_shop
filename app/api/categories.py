@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db
-from app.auth.deps import get_current_user
+from app.auth.deps import require_admin
 from app.models.user import User
 from app.schemas.catergory import CategoryCreate, CategoryOut, CategoryUpdate
 from app.services.category_service import CategoryService
@@ -16,7 +16,7 @@ router = APIRouter(prefix="/categories", tags=["categories"])
 async def create_category(
     payload: CategoryCreate,
     db: Annotated[AsyncSession, Depends(get_db)],
-    _user: User = Depends(get_current_user),
+    _user: User = Depends(require_admin),
 ):
     try:
         return await CategoryService.create(db, name=payload.name)
@@ -34,7 +34,7 @@ async def update_category(
     category_id: int,
     payload: CategoryUpdate,
     db: Annotated[AsyncSession, Depends(get_db)],
-    _user: User = Depends(get_current_user),
+    _user: User = Depends(require_admin),
 ):
     cat = await CategoryService.get(db, category_id)
     if not cat:
@@ -46,7 +46,7 @@ async def update_category(
 async def delete_category(
     category_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
-    _user: User = Depends(get_current_user),
+    _user: User = Depends(require_admin),
 ):
     cat = await CategoryService.get(db, category_id)
     if not cat:
