@@ -1,38 +1,61 @@
-# app/repositories/base.py
-from typing import Any
+from collections.abc import Mapping, Sequence
+from typing import Any, TypeVar
 
-from sqlalchemy import select
+from pydantic import BaseModel
+from sqlalchemy import func
+from sqlalchemy import update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.base import Base
+T = TypeVar("T")
 
 
-class BaseRepository[T: Base]:
+class BaseRepository:
+    model: type[T]
+
     def __init__(self, model: type[T]):
         self.model = model
 
-    async def get(self, db: AsyncSession, id: int) -> T | None:
-        return await db.get(self.model, id)
+    async def update(
+        self,
+        db: AsyncSession,
+        db_obj: T,
+        obj_in: BaseModel | Mapping[str, Any],
+        *,
+        ignore_none: bool = True,
+        protected: Sequence[str] = ("id", "created_at"),
+        force_touch_when_empty: bool = True,
+    ) -> T:
+        if isinstance(obj_in, BaseModel):
+            data = obj_in.model_dump(exclude_unset=True)
+        else:
+            data = dict(obj_in)
 
-    async def list(self, db: AsyncSession) -> list[T]:
-        result = await db.execute(select(self.model))
-        return result.scalars().all()
+        data = {
+            k: v
+            for k, v in data.items()
+            if k not in protected and (v is not None or not ignore_none)
+        }
 
-    async def create(self, db: AsyncSession, obj_in: dict[str, Any]) -> T:
-        obj = self.model(**obj_in)
-        db.add(obj)
-        await db.commit()
-        await db.refresh(obj)
-        return obj
+        try:
+            if not data:
+                if force_touch_when_empty and hasattr(self.model, "updated_at"):
+                    await db.execute(
+                        sa_update(self.model)
+                        .where(self.model.id == db_obj.id)
+                        .values(updated_at=func.now())
+                    )
+                    await db.commit()
+                    await db.refresh(db_obj)
+                return db_obj
 
-    async def update(self, db: AsyncSession, db_obj: T, obj_in: dict[str, Any]) -> T:
-        for field, value in obj_in.items():
-            setattr(db_obj, field, value)
-        db.add(db_obj)
-        await db.commit()
-        await db.refresh(db_obj)
-        return db_obj
+            for field, value in data.items():
+                setattr(db_obj, field, value)
 
-    async def delete(self, db: AsyncSession, db_obj: T) -> None:
-        await db.delete(db_obj)
-        await db.commit()
+            await db.flush()
+            await db.commit()
+            await db.refresh(db_obj)
+            return db_obj
+
+        except Exception:
+            await db.rollback()
+            raise

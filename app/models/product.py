@@ -2,9 +2,10 @@ from sqlalchemy import CheckConstraint, Column, Float, ForeignKey, Integer, Stri
 from sqlalchemy.orm import relationship
 
 from app.db.base import Base
+from app.models.mixins import TimestampMixin
 
 
-class Product(Base):
+class Product(TimestampMixin, Base):
     __tablename__ = "products"
     __table_args__ = (CheckConstraint("price >= 0", name="ck_products_price_nonneg"),)
 

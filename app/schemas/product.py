@@ -1,19 +1,22 @@
-from pydantic import BaseModel, Field
+from datetime import datetime
+
+from pydantic import BaseModel, ConfigDict, Field
 
 
-class ProductsBase(BaseModel):
+class ProductBase(BaseModel):
     name: str = Field(min_length=2)
     brand: str = Field(min_length=1)
-    price: float = Field(ge=0)  # Цена не может быть отрицательной
+    price: float = Field(ge=0)  # цена не может быть отрицательной
     description: str | None = None
-    category_id: int
+    category_id: int  # категория обязательна при создании
 
 
-class ProductCreate(ProductsBase):
+class ProductCreate(ProductBase):
     pass
 
 
 class ProductUpdate(BaseModel):
+    # все поля опциональны, чтобы можно было частично обновлять
     name: str | None = None
     brand: str | None = None
     price: float | None = Field(default=None, ge=0)
@@ -21,8 +24,9 @@ class ProductUpdate(BaseModel):
     category_id: int | None = None
 
 
-class ProductOut(ProductsBase):
+class ProductRead(ProductBase):
     id: int
+    created_at: datetime
+    updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

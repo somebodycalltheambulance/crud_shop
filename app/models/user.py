@@ -1,9 +1,10 @@
 from sqlalchemy import Boolean, Column, Integer, String
 
 from app.db.base import Base
+from app.models.mixins import TimestampMixin
 
 
-class User(Base):
+class User(TimestampMixin, Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
